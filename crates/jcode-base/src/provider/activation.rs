@@ -227,7 +227,7 @@ impl ProviderActivation {
 /// Later model switches remain free to select any configured provider.
 pub fn select_initial_runtime_provider_key(provider_key_raw: &str) {
     crate::env::set_var("JCODE_ACTIVE_PROVIDER", provider_key_raw);
-    crate::env::set_var("JCODE_RUNTIME_PROVIDER", provider_key);
+    crate::env::set_var("JCODE_RUNTIME_PROVIDER", provider_key_raw);
     crate::env::set_var("JCODE_INITIAL_PROVIDER_EXPLICIT", "1");
     crate::logging::auth_event(
         "runtime_activation_initial_provider",

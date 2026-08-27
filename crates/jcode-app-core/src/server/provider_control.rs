@@ -1431,6 +1431,13 @@ mod tests {
             Ok(())
         }
 
+        fn context_window(&self) -> usize {
+            match self.model().as_str() {
+                "test-model-b" => 24_000,
+                _ => 12_000,
+            }
+        }
+
         fn available_models_for_switching(&self) -> Vec<String> {
             vec!["test-model-a".to_string(), "test-model-b".to_string()]
         }
@@ -1554,6 +1561,11 @@ mod tests {
             .await
             .expect("deferred model change should finish after agent is idle");
         assert_eq!(provider.model(), "test-model-b");
+        assert_eq!(
+            agent.lock().await.compaction_budget_for_test(),
+            Some(24_000),
+            "server compaction budget must follow the selected model"
+        );
         assert!(matches!(
             event,
             Some(ServerEvent::ModelChanged {
