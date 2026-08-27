@@ -70,6 +70,49 @@ fn test_provider_choice_arg_values() {
     assert_eq!(ProviderChoice::Auto.as_arg_value(), "auto");
 }
 
+#[test]
+fn explicit_initial_provider_selection_replaces_stale_runtime_identity() {
+    let _guard = lock_env();
+    let keys = [
+        "JCODE_RUNTIME_PROVIDER",
+        "JCODE_ACTIVE_PROVIDER",
+        "JCODE_INITIAL_PROVIDER_EXPLICIT",
+    ];
+    let saved: Vec<(&str, Option<String>)> = keys
+        .iter()
+        .map(|key| (*key, std::env::var(key).ok()))
+        .collect();
+
+    crate::env::set_var("JCODE_RUNTIME_PROVIDER", "claude");
+    crate::env::set_var("JCODE_ACTIVE_PROVIDER", "claude");
+    crate::env::remove_var("JCODE_INITIAL_PROVIDER_EXPLICIT");
+
+    select_initial_model_provider("openai");
+
+    assert_eq!(
+        std::env::var("JCODE_RUNTIME_PROVIDER").ok().as_deref(),
+        Some("openai")
+    );
+    assert_eq!(
+        std::env::var("JCODE_ACTIVE_PROVIDER").ok().as_deref(),
+        Some("openai")
+    );
+    assert_eq!(
+        std::env::var("JCODE_INITIAL_PROVIDER_EXPLICIT")
+            .ok()
+            .as_deref(),
+        Some("1")
+    );
+
+    for (key, value) in saved {
+        if let Some(value) = value {
+            crate::env::set_var(key, value);
+        } else {
+            crate::env::remove_var(key);
+        }
+    }
+}
+
 #[tokio::test(flavor = "multi_thread")]
 #[expect(
     clippy::await_holding_lock,
