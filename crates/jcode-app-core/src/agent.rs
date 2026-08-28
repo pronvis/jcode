@@ -6,6 +6,7 @@ mod inline_tail;
 mod interrupts;
 mod messages;
 mod prompting;
+mod repeat_guard;
 mod provider;
 mod response_recovery;
 mod status;
@@ -209,6 +210,8 @@ pub struct Agent {
     tool_result_ids: HashSet<String>,
     /// Number of stored session messages already indexed for missing tool-output repair.
     tool_output_scan_index: usize,
+    /// Detects the same read-only observation being fetched over and over.
+    repeat_guard: repeat_guard::RepeatGuard,
     /// Soft interrupt queue: messages to inject at next safe point without cancelling
     /// Uses std::sync::Mutex so it can be accessed without async, even while agent is processing
     soft_interrupt_queue: SoftInterruptQueue,
@@ -312,6 +315,7 @@ impl Agent {
             tool_call_ids: HashSet::new(),
             tool_result_ids: HashSet::new(),
             tool_output_scan_index: 0,
+            repeat_guard: repeat_guard::RepeatGuard::new(),
             soft_interrupt_queue: Arc::new(std::sync::Mutex::new(Vec::new())),
             background_tool_signal: InterruptSignal::new(),
             graceful_shutdown: InterruptSignal::new(),
@@ -584,6 +588,7 @@ impl Agent {
         self.pending_alerts.clear();
         self.current_turn_system_reminder = None;
         self.reset_tool_output_tracking();
+        self.repeat_guard.reset();
         if let Ok(mut queue) = self.soft_interrupt_queue.lock() {
             queue.clear();
         }
@@ -899,6 +904,16 @@ impl Agent {
         }
 
         repaired
+    }
+
+    /// Record a completed tool call with the repeat guard and return the notice
+    /// (if any) to append to its output.
+    pub(super) fn observe_tool_repetition(
+        &mut self,
+        tool_name: &str,
+        input: &serde_json::Value,
+    ) -> Option<String> {
+        self.repeat_guard.observe(tool_name, input)
     }
 
     fn reset_tool_output_tracking(&mut self) {

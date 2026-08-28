@@ -1442,7 +1442,12 @@ impl Agent {
 
                     match result {
                         Ok(output) => {
-                            let output = cap_tool_output_for_history(&tc.name, output);
+                            let mut output = cap_tool_output_for_history(&tc.name, output);
+                            // Appended to the model-visible output only. The
+                            // ToolDone event below keeps the unannotated text so
+                            // the notice never shows up in the UI transcript.
+                            let repetition_notice =
+                                self.observe_tool_repetition(&tc.name, &tc.input);
                             let _ = event_tx.send(ServerEvent::ToolDone {
                                 id: tc.id.clone(),
                                 name: tc.name.clone(),
@@ -1465,6 +1470,9 @@ impl Agent {
                                 });
                             }
 
+                            if let Some(notice) = repetition_notice {
+                                output.output.push_str(&notice);
+                            }
                             let blocks = tool_output_to_content_blocks(tc.id.clone(), output);
                             self.add_message_with_duration(
                                 Role::User,
