@@ -94,6 +94,7 @@ impl Agent {
         source: crate::provider::ProviderModelSelectionSource,
     ) -> Result<()> {
         self.provider.set_route_selection(selection)?;
+        self.refresh_compaction_budget_for_current_model();
         let resolved_model = self.provider.model();
         self.session.provider_key = Some(selection.runtime_key.stable_id());
         self.session.route_api_method = Some(selection.api_method.clone());
@@ -118,6 +119,7 @@ impl Agent {
         source: crate::provider::ProviderModelSelectionSource,
     ) -> Result<()> {
         crate::provider::set_model_with_auth_refresh(self.provider.as_ref(), model)?;
+        self.refresh_compaction_budget_for_current_model();
         let resolved_model = self.provider.model();
         self.session.provider_key =
             crate::provider::MultiProvider::session_provider_key_after_model_switch(
@@ -131,6 +133,31 @@ impl Agent {
         self.persist_session_best_effort("model selection");
         self.log_env_snapshot("set_model");
         Ok(())
+    }
+
+    pub(crate) fn refresh_compaction_budget_for_current_model(&self) -> bool {
+        let budget = self.provider.context_window();
+        match self.registry.compaction().try_write() {
+            Ok(mut manager) => {
+                manager.set_budget(budget);
+                true
+            }
+            Err(_) => {
+                crate::logging::warn(
+                    "Unable to refresh server compaction budget after model change (lock held)",
+                );
+                false
+            }
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn compaction_budget_for_test(&self) -> Option<usize> {
+        self.registry
+            .compaction()
+            .try_read()
+            .ok()
+            .map(|manager| manager.token_budget())
     }
 
     pub(crate) fn provider_model_selection_generation(&self) -> u64 {
