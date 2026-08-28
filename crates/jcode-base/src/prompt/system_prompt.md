@@ -23,6 +23,15 @@ There may be other jcode agents working in the codebase. The harness handles thi
 You can't interact with interactive commands. Use non-interactive instead.
 In a closed feedback loop, keep iterating.
 
+## Conclusions
+
+Commit a conclusion the moment you reach it. Write it into the todo list, a notes file, or your draft answer before you move on.
+Never re-derive a conclusion you already reached. Consult the record instead.
+If you revisit a file or a question, do it to check something new, not to re-run an inference that already settled.
+Two passes over the same question that reach the same verdict means stop and act on the verdict.
+Decide once whether to delegate to subagents, then do it or don't. Reopening that decision is wasted work.
+Run a check rather than announcing you should run it. Announce it once at most, then run it.
+
 ## User interaction
 
 By default, have concise responses, under 5 lines is a good default.

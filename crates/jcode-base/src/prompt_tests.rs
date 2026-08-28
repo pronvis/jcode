@@ -659,3 +659,22 @@ fn project_system_prompt_file_replaces_default_base_prompt() {
 
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// The anti-rederivation guidance is the prompt half of the loop fix; the
+/// harness half lives in `agent::repeat_guard`. Traces showed the same verdict
+/// reached up to fifteen times because conclusions were never committed
+/// anywhere, so a prompt edit that quietly drops this section would silently
+/// restore the behavior the repeat guard only mitigates.
+#[test]
+fn default_system_prompt_tells_the_agent_to_commit_conclusions() {
+    let prompt = DEFAULT_SYSTEM_PROMPT.to_lowercase();
+
+    assert!(
+        prompt.contains("## conclusions"),
+        "DEFAULT_SYSTEM_PROMPT should keep the Conclusions section"
+    );
+    assert!(
+        prompt.contains("re-derive"),
+        "Conclusions section should forbid re-deriving a settled conclusion"
+    );
+}
